@@ -44,6 +44,14 @@ class GmailTool(BaseTool):
         return asyncio.run(self._arun(query))
 
     async def _arun(self, query: str) -> str:
+        from services.db_service import mongodb
+        t = await mongodb.get_token("gmail")
+        if t:
+            self.access_token = t.get("access_token", "")
+            
+        if not self.access_token:
+            return "Gmail not configured. Please connect from the UI."
+
         parts = query.strip().split(maxsplit=1)
         action = parts[0].lower() if parts else "inbox"
         arg = parts[1] if len(parts) > 1 else ""
@@ -192,6 +200,14 @@ class GoogleCalendarTool(BaseTool):
         return asyncio.run(self._arun(query))
 
     async def _arun(self, query: str) -> str:
+        from services.db_service import mongodb
+        t = await mongodb.get_token("calendar")
+        if t:
+            self.access_token = t.get("access_token", "")
+            
+        if not self.access_token:
+            return "Google Calendar not configured. Please connect from the UI."
+
         parts = query.strip().split(maxsplit=1)
         action = parts[0].lower() if parts else "events"
         arg = parts[1] if len(parts) > 1 else ""
@@ -310,6 +326,14 @@ class GoogleDocsTool(BaseTool):
         return asyncio.run(self._arun(query))
 
     async def _arun(self, query: str) -> str:
+        from services.db_service import mongodb
+        t = await mongodb.get_token("docs")
+        if t:
+            self.access_token = t.get("access_token", "")
+            
+        if not self.access_token:
+            return "Google Docs not configured. Please connect from the UI."
+
         parts = query.strip().split(maxsplit=1)
         action = parts[0].lower() if parts else "list"
         arg = parts[1] if len(parts) > 1 else ""

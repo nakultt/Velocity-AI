@@ -11,8 +11,7 @@ from services.ai_service import generate_chat_response
 
 router = APIRouter()
 
-# In-memory conversation store (mock — production uses MongoDB)
-_conversations: dict[str, list[dict]] = {}
+from services.db_service import mongodb
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -26,14 +25,15 @@ async def chat(request: ChatRequest) -> ChatResponse:
     """
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
-    # Store user message
-    if conversation_id not in _conversations:
-        _conversations[conversation_id] = []
+    # Get existing conversation
+    messages = await mongodb.get_conversation(conversation_id)
 
-    _conversations[conversation_id].append({
+    # Store user message
+    messages.append({
         "role": "user",
         "content": request.message,
     })
+    await mongodb.save_conversation(conversation_id, messages)
 
     # Run through LangGraph agent pipeline
     try:
@@ -42,15 +42,19 @@ async def chat(request: ChatRequest) -> ChatResponse:
             mode=request.mode,
             thread_id=conversation_id,
         )
-    except Exception:
+    except Exception as e:
+        import traceback
+        print(f"⚠️ Agent pipeline error in chat.py: {e}")
+        traceback.print_exc()
         # Fallback to simple chat
         result = await generate_chat_response(request.message, request.mode)
 
     # Store assistant message
-    _conversations[conversation_id].append({
+    messages.append({
         "role": "assistant",
         "content": result["response"],
     })
+    await mongodb.save_conversation(conversation_id, messages)
 
     return ChatResponse(
         response=result["response"],
@@ -84,7 +88,7 @@ async def reject_action(conversation_id: str) -> dict:
 @router.get("/chat/history/{conversation_id}")
 async def get_chat_history(conversation_id: str) -> dict:
     """Get conversation history."""
-    messages = _conversations.get(conversation_id, [])
+    messages = await mongodb.get_conversation(conversation_id)
     return {
         "conversation_id": conversation_id,
         "messages": messages,

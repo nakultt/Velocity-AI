@@ -36,7 +36,7 @@ class GitHubTool(BaseTool):
         "Use action='repos' to list repos, 'issues' for open issues, "
         "'pulls' for open PRs, 'commits' for recent commits."
     )
-    token: str = Field(default_factory=lambda: os.getenv("GITHUB_TOKEN", ""))
+    token: str = Field(default="")
 
     # ── public entry-point ────────────────────────────────
     def _run(self, query: str) -> str:
@@ -46,6 +46,14 @@ class GitHubTool(BaseTool):
 
     async def _arun(self, query: str) -> str:
         """Parse the query and dispatch to the right GitHub endpoint."""
+        from services.db_service import mongodb
+        t = await mongodb.get_token("github")
+        if t:
+            self.token = t.get("token", "")
+            
+        if not self.token:
+            return "GitHub not configured. Please connect from the UI."
+            
         parts = query.strip().split(maxsplit=1)
         action = parts[0].lower() if parts else "repos"
         arg = parts[1] if len(parts) > 1 else ""

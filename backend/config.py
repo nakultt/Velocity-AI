@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     # App
     app_name: str = "Velocity AI"
-    debug: bool = True
+    debug: str | bool = True
 
     # Gemini AI
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
@@ -41,6 +41,11 @@ class Settings(BaseSettings):
 
     # Notion
     notion_api_key: str = os.getenv("NOTION_API_KEY", "")
+
+    # Jira
+    jira_api_token: str = os.getenv("JIRA_API_TOKEN", "")
+    jira_email: str = os.getenv("JIRA_EMAIL", "")
+    jira_cloud_url: str = os.getenv("JIRA_CLOUD_URL", "")
 
     # Frontend
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5173")

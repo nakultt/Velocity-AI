@@ -36,7 +36,7 @@ class SlackTool(BaseTool):
         "Use action='channels' to list channels, 'messages #channel' to read, "
         "'search query' to search, 'post #channel message' to send."
     )
-    token: str = Field(default_factory=lambda: os.getenv("SLACK_BOT_TOKEN", ""))
+    token: str = Field(default="")
 
     # ── entry-point ───────────────────────────────────────
     def _run(self, query: str) -> str:
@@ -44,6 +44,14 @@ class SlackTool(BaseTool):
         return asyncio.run(self._arun(query))
 
     async def _arun(self, query: str) -> str:
+        from services.db_service import mongodb
+        t = await mongodb.get_token("slack")
+        if t:
+            self.token = t.get("token", "")
+            
+        if not self.token:
+            return "Slack not configured. Please connect from the UI."
+            
         parts = query.strip().split(maxsplit=1)
         action = parts[0].lower() if parts else "channels"
         arg = parts[1] if len(parts) > 1 else ""

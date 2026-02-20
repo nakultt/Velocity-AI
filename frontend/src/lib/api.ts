@@ -225,6 +225,30 @@ export function getGoogleConnectUrl(service: string = "google"): string {
   return `${API_BASE_URL}/api/integrations/google/connect?service=${service}`;
 }
 
+export async function connectService(
+  service: string,
+  token: string,
+  email?: string,
+  cloudUrl?: string
+): Promise<{ status: string; service: string }> {
+  return apiRequest<{ status: string; service: string }>(
+    `/api/integrations/connect/${service}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, email, cloud_url: cloudUrl }),
+    }
+  );
+}
+
+export async function disconnectService(
+  service: string
+): Promise<{ status: string; service: string }> {
+  return apiRequest<{ status: string; service: string }>(
+    `/api/integrations/disconnect/${service}`,
+    { method: "POST" }
+  );
+}
 // ============== Health Check ==============
 
 export async function healthCheck(): Promise<{

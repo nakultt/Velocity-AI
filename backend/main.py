@@ -8,15 +8,26 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routers import chat, tasks, calendar, projects, metrics, integrations, auth, conversations, activity
-
+from routers import chat, tasks, calendar, projects, metrics, integrations, conversations, activity
+from services.db_service import mongodb, neo4j_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup/shutdown lifecycle."""
     print(f"🚀 {settings.app_name} API starting...")
+    import asyncio
+    from services.polling import poll_integrations
+    
+    # Initialize Databases
+    await mongodb.connect()
+    await neo4j_service.connect()
+    
+    # Start polling loop
+    polling_task = asyncio.create_task(poll_integrations())
+    
     yield
     print(f"👋 {settings.app_name} API shutting down...")
+    polling_task.cancel()
 
 
 app = FastAPI(
@@ -42,7 +53,7 @@ app.add_middleware(
 )
 
 # Include Routers
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(tasks.router, prefix="/api", tags=["Tasks"])
 app.include_router(calendar.router, prefix="/api", tags=["Calendar"])

@@ -27,6 +27,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.prebuilt import create_react_agent
 
 from tools.github_tool import GitHubTool
 from tools.slack_tool import SlackTool
@@ -527,10 +528,7 @@ def build_workspace_graph() -> StateGraph:
 # Compiled Graphs (with memory checkpoint)
 # ═══════════════════════════════════════════════════════════
 
-memory = MemorySaver()  # In production, use MongoDB checkpointer
-
-personal_graph = build_personal_graph().compile(checkpointer=memory)
-workspace_graph = build_workspace_graph().compile(checkpointer=memory)
+# Graphs are now compiled dynamically with AsyncMongoDBSaver in run_velocity_agent
 
 
 # ═══════════════════════════════════════════════════════════
@@ -571,7 +569,60 @@ async def run_velocity_agent(
 
     config = {"configurable": {"thread_id": thread_id}}
 
-    graph = personal_graph if mode == "personal" else workspace_graph
+    # 1. Interactive Chat Mode (User asking chatbot a direct question)
+    if thread_id != "system_polling":
+        llm = _get_llm()
+        tools_dict = _get_tools()
+        tools_list = list(tools_dict.values())
+        
+        system_instruction = (
+            "You are Velocity AI, a productivity assistant with access to tools (GitHub, Slack, Calendar, Docs, Notion, Jira). "
+            "Use them to answer the user's questions or perform actions on their behalf. "
+            "If they ask to see channels, list projects, check emails, etc. you MUST use your tools to find the answer. "
+            "Always be concise and helpful."
+        )
+        if mode == "workspace":
+            system_instruction += "\nWorkspace mode: focus on team projects, blockers, and updates."
+        else:
+            system_instruction += "\nPersonal mode: focus on academics, personal schedule, and study."
+            
+        chat_agent = create_react_agent(llm, tools=tools_list, checkpointer=MemorySaver())
+        
+        try:
+            chat_result = await chat_agent.ainvoke(
+                {"messages": [
+                    SystemMessage(content=system_instruction),
+                    HumanMessage(content=user_input)
+                ]},
+                config
+            )
+            final_msg = chat_result["messages"][-1].content
+            return {
+                "response": final_msg,
+                "requires_approval": False,
+                "proposed_action": None,
+                "sources": ["Agent Tools"],
+                "prioritized_tasks": [],
+                "schedule_proposals": [],
+                "research_findings": [],
+            }
+        except Exception as e:
+            return {
+                "response": f"Chat agent error: {e}",
+                "requires_approval": False,
+                "proposed_action": None,
+                "sources": [],
+                "prioritized_tasks": [],
+                "schedule_proposals": [],
+                "research_findings": [],
+            }
+
+    # 2. Daily Summary / Background Polling Mode (Rigid pipeline)
+    memory = MemorySaver()
+    if mode == "personal":
+        graph = build_personal_graph().compile(checkpointer=memory)
+    else:
+        graph = build_workspace_graph().compile(checkpointer=memory)
 
     try:
         result = await graph.ainvoke(initial_state, config)
