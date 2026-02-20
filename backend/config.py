@@ -17,8 +17,11 @@ class Settings(BaseSettings):
     app_name: str = "Velocity AI"
     debug: str | bool = True
 
-    # Gemini AI
-    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    # Groq AI
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
+
+    # Groq AI
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
 
     # MongoDB
     mongodb_uri: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017/velocity")

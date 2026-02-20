@@ -5,16 +5,16 @@ LangGraph orchestration is scaffolded for future agentic workflows.
 """
 
 import os
-from google import genai
+from groq import AsyncGroq
 from config import settings
 
 
-# Initialize Gemini client
+# Initialize Groq client
 client = None
-if settings.gemini_api_key:
-    client = genai.Client(api_key=settings.gemini_api_key)
+if settings.groq_api_key:
+    client = AsyncGroq(api_key=settings.groq_api_key)
 
-MODEL = "gemini-2.5-flash"
+MODEL = "llama-3.3-70b-versatile"
 
 # System prompts for different modes
 PERSONAL_SYSTEM_PROMPT = """You are Velocity AI, a personal productivity assistant for student founders.
@@ -46,16 +46,16 @@ async def generate_chat_response(message: str, mode: str = "personal") -> dict:
 
     if client:
         try:
-            response = client.models.generate_content(
+            response = await client.chat.completions.create(
                 model=MODEL,
-                contents=message,
-                config=genai.types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.7,
-                    max_output_tokens=1024,
-                ),
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.7,
+                max_tokens=1024,
             )
-            response_text = response.text
+            response_text = response.choices[0].message.content
 
             # Detect if AI suggests scheduling or priority changes → trigger approval
             requires_approval = any(
@@ -79,7 +79,7 @@ async def generate_chat_response(message: str, mode: str = "personal") -> dict:
             }
 
         except Exception as e:
-            print(f"Gemini API error: {e}")
+            print(f"Groq API error: {e}")
             # Fall through to mock
 
     # Mock response when no API key

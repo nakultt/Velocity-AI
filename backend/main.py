@@ -76,8 +76,7 @@ async def detailed_health() -> dict[str, str]:
     return {
         "status": "healthy",
         "service": "Velocity AI API",
-        "version": "1.0.0",
-        "ai_model": "gemini-2.5-flash",
+        "ai_model": "llama-3.3-70b-versatile",
     }
 
 

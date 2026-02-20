@@ -22,7 +22,7 @@ import json
 from typing import TypedDict, Annotated, Literal
 from datetime import datetime
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
@@ -63,13 +63,13 @@ class VelocityState(TypedDict):
 # LLM + Tools
 # ═══════════════════════════════════════════════════════════
 
-def _get_llm() -> ChatGoogleGenerativeAI:
-    """Get Gemini 2.5 Flash LLM instance."""
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=os.getenv("GEMINI_API_KEY", ""),
+def _get_llm() -> ChatGroq:
+    """Get Groq LLM instance."""
+    return ChatGroq(
+        model="llama-3.3-70b-versatile",
+        api_key=os.getenv("GROQ_API_KEY", ""),
         temperature=0.7,
-        max_output_tokens=2048,
+        max_tokens=2048,
     )
 
 
