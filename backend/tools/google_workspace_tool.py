@@ -11,7 +11,11 @@ from typing import Optional
 
 import httpx
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import Field, BaseModel
+
+
+class QueryInput(BaseModel):
+    query: str = Field(description="The action and arguments to perform.")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -37,6 +41,7 @@ class GmailTool(BaseTool):
         "Use action='inbox' for recent emails, 'read MSG_ID' to read, "
         "'search query' to search, 'send to@email.com|subject|body' to send."
     )
+    args_schema: type[BaseModel] = QueryInput
     access_token: str = Field(default="")
 
     def _run(self, query: str) -> str:
@@ -192,6 +197,7 @@ class GoogleCalendarTool(BaseTool):
         "'create title|start_iso|end_iso|description' to create, "
         "'delete EVENT_ID' to remove."
     )
+    args_schema: type[BaseModel] = QueryInput
     access_token: str = Field(default="")
     calendar_id: str = Field(default="primary")
 
@@ -319,6 +325,7 @@ class GoogleDocsTool(BaseTool):
         "Access Google Docs/Drive: list recent docs, read content, search. "
         "Use action='list' for recent docs, 'read DOC_ID' to read, 'search query' to find."
     )
+    args_schema: type[BaseModel] = QueryInput
     access_token: str = Field(default="")
 
     def _run(self, query: str) -> str:

@@ -11,7 +11,11 @@ from typing import Optional
 
 import httpx
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import Field, BaseModel
+
+
+class QueryInput(BaseModel):
+    query: str = Field(description="The action and arguments to perform.")
 
 
 SLACK_API = "https://slack.com/api"
@@ -36,6 +40,7 @@ class SlackTool(BaseTool):
         "Use action='channels' to list channels, 'messages #channel' to read, "
         "'search query' to search, 'post #channel message' to send."
     )
+    args_schema: type[BaseModel] = QueryInput
     token: str = Field(default="")
 
     # ── entry-point ───────────────────────────────────────

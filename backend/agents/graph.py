@@ -66,7 +66,7 @@ class VelocityState(TypedDict):
 def _get_llm() -> ChatGroq:
     """Get Groq LLM instance."""
     return ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         api_key=os.getenv("GROQ_API_KEY", ""),
         temperature=0.7,
         max_tokens=2048,
@@ -579,14 +579,17 @@ async def run_velocity_agent(
             "You are Velocity AI, a productivity assistant with access to tools (GitHub, Slack, Calendar, Docs, Notion, Jira). "
             "Use them to answer the user's questions or perform actions on their behalf. "
             "If they ask to see channels, list projects, check emails, etc. you MUST use your tools to find the answer. "
-            "Always be concise and helpful."
+            "Always be concise and helpful.\n\n"
+            "CRITICAL TOOL INSTRUCTION: You MUST use the standard JSON format for tool calling. "
+            "NEVER use XML tags like <function=...>. Always output pure JSON when executing a tool."
         )
         if mode == "workspace":
             system_instruction += "\nWorkspace mode: focus on team projects, blockers, and updates."
         else:
             system_instruction += "\nPersonal mode: focus on academics, personal schedule, and study."
             
-        chat_agent = create_react_agent(llm, tools=tools_list, checkpointer=MemorySaver())
+        bound_llm = llm.bind_tools(tools_list)
+        chat_agent = create_react_agent(bound_llm, tools=tools_list, checkpointer=MemorySaver())
         
         try:
             chat_result = await chat_agent.ainvoke(

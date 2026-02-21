@@ -10,7 +10,11 @@ import os
 from typing import Optional
 
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import Field, BaseModel
+
+
+class QueryInput(BaseModel):
+    query: str = Field(description="The action and arguments to perform.")
 
 
 class Neo4jMemoryTool(BaseTool):
@@ -33,6 +37,7 @@ class Neo4jMemoryTool(BaseTool):
         "'relate from_label:from_name|relation|to_label:to_name' for relationships, "
         "'query topic' for context retrieval, 'subgraph topic' for full graph."
     )
+    args_schema: type[BaseModel] = QueryInput
 
     uri: str = Field(default_factory=lambda: os.getenv("NEO4J_URI", "bolt://localhost:7687"))
     user: str = Field(default_factory=lambda: os.getenv("NEO4J_USER", "neo4j"))

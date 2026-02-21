@@ -11,7 +11,11 @@ from typing import Optional
 
 import httpx
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import Field, BaseModel
+
+
+class QueryInput(BaseModel):
+    query: str = Field(description="The action and arguments to perform.")
 
 
 GITHUB_API = "https://api.github.com"
@@ -32,10 +36,13 @@ class GitHubTool(BaseTool):
 
     name: str = "github"
     description: str = (
-        "Access GitHub repositories, issues, pull requests, and commits. "
-        "Use action='repos' to list repos, 'issues' for open issues, "
-        "'pulls' for open PRs, 'commits' for recent commits."
+        "Access GitHub repositories, issues, pull requests, commits, and create repos. "
+        "Argument MUST be a single plain string with the action prefix. "
+        "Prefix with action: 'repos' to list repos, 'issues <repo>' for open issues, "
+        "'pulls <repo>' for open PRs, 'commits <repo>' for recent commits, "
+        "'create <name>' to create a new repository."
     )
+    args_schema: type[BaseModel] = QueryInput
     token: str = Field(default="")
 
     # ── public entry-point ────────────────────────────────
@@ -64,6 +71,7 @@ class GitHubTool(BaseTool):
             "pulls": self._list_pulls,
             "commits": self._list_commits,
             "pr_status": self._pr_review_status,
+            "create": self._create_repo,
         }
 
         handler = dispatch.get(action, self._list_repos)
@@ -179,3 +187,26 @@ class GitHubTool(BaseTool):
             return "\n".join(lines)
         except Exception as e:
             return f"GitHub API error: {e}"
+
+    async def _create_repo(self, name: str) -> str:
+        """Create a new public repository for the authenticated user."""
+        if not name:
+            return "Please provide a repository name."
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{GITHUB_API}/user/repos",
+                    headers=self._headers(),
+                    json={"name": name.strip(), "private": False, "auto_init": True},
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                return f"Successfully created repository '{name}'. URL: {data.get('html_url')}"
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 422:
+                return f"Repository '{name}' likely already exists or name is invalid."
+            return f"GitHub API error: {e.response.text}"
+        except Exception as e:
+            return f"GitHub Execution error: {e}"
+

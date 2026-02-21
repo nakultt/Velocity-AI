@@ -11,7 +11,11 @@ from typing import Optional
 
 import httpx
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import Field, BaseModel
+
+
+class QueryInput(BaseModel):
+    query: str = Field(description="The action and arguments to perform.")
 
 
 class JiraTool(BaseTool):
@@ -33,6 +37,7 @@ class JiraTool(BaseTool):
         "Use action='projects' for all projects, 'issues PROJECT_KEY' for issues, "
         "'search JQL_QUERY' to search."
     )
+    args_schema: type[BaseModel] = QueryInput
     api_token: str = Field(default="")
     email: str = Field(default="")
     cloud_url: str = Field(default="")
