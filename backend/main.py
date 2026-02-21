@@ -64,7 +64,7 @@ app.include_router(conversations.router, prefix="/api", tags=["Conversations"])
 app.include_router(activity.router, prefix="/api", tags=["Activity Log"])
 
 
-@app.get("/", tags=["Health"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Health"])
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy", "service": "Velocity AI API"}
